@@ -1,5 +1,12 @@
-// TODO: Add doxygen comments
-
+/** 
+ * @file	main.cpp
+ * @brief 	This JVMTI agent monitors applications for changes to the SecurityManager.
+ *
+ * The Java SecurityManager is responsible for enforcing a security policy for the thread
+ * it is assigned to. The SecurityManager is stored in java.lang.System's security field.
+ * This agent sets up a watch on that field and prints out the source file, function name,
+ * and line number of the code that initiates any changes to it.
+ */
 #include <jvmti.h>
 #include <string.h>
 
@@ -92,6 +99,15 @@ void check_jvmti_error(jvmtiEnv* jvmti, jvmtiError errnum, const char* str)
         print_jvmti_error(jvmti, errnum, str);
 }
 
+/**
+ * @brief	looks up and returns the reference for a class based on a user specified Java type signature
+ * 
+ * @param	[in] the JVMTI environment used to access the JVMTI API
+ * @param	[in] the Java type signature for the class we'd like to retrieve a reference to
+ * @param	[out] a pointer that will be set to reference the class whose signature was specified
+ *
+ * @retval	a JVMTI error code if one is returned by any of the JVMTI API calls
+ */
 jvmtiError GetClassBySignature(jvmtiEnv* jvmti, const char* signature, jclass* klass) {
 	jint class_count = 0;
 	jclass* classes = NULL;
@@ -122,6 +138,16 @@ jvmtiError GetClassBySignature(jvmtiEnv* jvmti, const char* signature, jclass* k
 	return JVMTI_ERROR_NONE;
 }
 
+/**
+ * @brief	looks up and returns the ID for a field in a class based on a user specified field name and class
+ * 
+ * @param	[in] the JVMTI environment used to access the JVMTI API
+ * @param	[in] the Java class we want to retrieve a field ID from
+ * @param	[in] the name of the field whose ID we want to retrieve
+ * @param	[out] a pointer to a jfieldID that will be set to the named field's ID
+ *
+ * @retval	a JVMTI error code if one is returned by any of the JVMTI API calls
+ */
 jvmtiError GetFieldIDByName(jvmtiEnv* jvmti, jclass klass, const char* name, jfieldID* fieldID) {
 	jint field_count = 0;
 	jfieldID* fields = NULL;
