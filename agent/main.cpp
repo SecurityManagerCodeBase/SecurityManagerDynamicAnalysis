@@ -82,6 +82,8 @@ void print_jvmti_error(jvmtiEnv* jvmti, jvmtiError errnum, const char* str)
     jvmti->GetErrorName(errnum, &errnum_str);
     printf("ERROR: JVMTI: %d(%s): %s\n", errnum, errnum_str == NULL ? "Unknown" : errnum_str, 
 		str == NULL ? "" : str);
+
+	jvmti->Deallocate((unsigned char*)errnum_str);
 }
 
 void check_jvmti_error(jvmtiEnv* jvmti, jvmtiError errnum, const char* str)
@@ -111,7 +113,11 @@ jvmtiError GetClassBySignature(jvmtiEnv* jvmti, const char* signature, jclass* k
 			*klass = classes[i];
 			break;
 		}
+
+		jvmti->Deallocate((unsigned char*)class_signature);
 	}
+
+	jvmti->Deallocate((unsigned char*)classes);
 
 	return JVMTI_ERROR_NONE;
 }
@@ -136,7 +142,11 @@ jvmtiError GetFieldIDByName(jvmtiEnv* jvmti, jclass klass, const char* name, jfi
 			*fieldID = fields[i];
 			break;
 		}
+
+		jvmti->Deallocate((unsigned char*)field_name);
 	}
+
+	jvmti->Deallocate((unsigned char*)fields);
 
 	return JVMTI_ERROR_NONE;
 }
@@ -191,4 +201,8 @@ void JNICALL FieldModification(jvmtiEnv* jvmti, JNIEnv* jni_env,
 	}
 
 	printf("SecurityManager Changed:\n%s, %s, %d\n\n", source_file_name, method_name, line_number);
+
+	jvmti->Deallocate((unsigned char*)line_table);
+	jvmti->Deallocate((unsigned char*)method_name);
+	jvmti->Deallocate((unsigned char*)source_file_name);
 }
