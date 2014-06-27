@@ -1,5 +1,3 @@
-// Compiled with g++ -fPIC -I$JAVA_HOME/include -shared -o libagent.so main.cpp
-
 // TODO: Add doxygen comments
 
 #include <jvmti.h>
@@ -15,8 +13,8 @@ void JNICALL FieldModification(jvmtiEnv *jvmti_env, JNIEnv* jni_env,
                 char signature_type, jvalue new_value);
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* jvm, char* options, void* reserved) {
-	static jvmtiEnv* jvmti = NULL;
-	static jvmtiCapabilities capabilities;
+	jvmtiEnv* jvmti = NULL;
+	jvmtiCapabilities capabilities;
 	jvmtiError error;
 	jvmtiEventCallbacks callbacks;
 	
@@ -102,7 +100,7 @@ jvmtiError GetClassBySignature(jvmtiEnv* jvmti, const char* signature, jclass* k
 		return error;
 
 
-	for (size_t i = 0; i < class_count; i++) {
+	for (int i = 0; i < class_count; i++) {
 		char* class_signature = NULL;
 
 		error = jvmti->GetClassSignature(classes[i], &class_signature, NULL);
@@ -127,7 +125,7 @@ jvmtiError GetFieldIDByName(jvmtiEnv* jvmti, jclass klass, const char* name, jfi
 	if (error != JVMTI_ERROR_NONE)
 		return error;
 
-	for (size_t i = 0; i < field_count; i++) {
+	for (int i = 0; i < field_count; i++) {
 		char* field_name = NULL;
 
 		error = jvmti->GetFieldName(klass, fields[i], &field_name, NULL, NULL);
@@ -167,7 +165,7 @@ void JNICALL FieldModification(jvmtiEnv* jvmti, JNIEnv* jni_env,
 	error = jvmti->GetLineNumberTable(caller_frame.method, &line_count, &line_table);	
 	check_jvmti_error(jvmti, error, "Unable to get line number for SecurityManager change.");
 
-	for (size_t i = 0; i < line_count; i++) {
+	for (int i = 0; i < line_count; i++) {
 		if (line_table[i].start_location > caller_frame.location)
 			break;
 
@@ -188,11 +186,9 @@ void JNICALL FieldModification(jvmtiEnv* jvmti, JNIEnv* jni_env,
 	if ((long)new_value.j == 0) {
 		printf("WARNING: The SecurityManager is being disabled!!!\n");
 	} else {
-		jclass new_manager = jni_env->GetObjectClass(new_value.l);
-
-		// TODO: Query the fields of the class to see if we have weakened the manager
+		//jclass new_manager = jni_env->GetObjectClass(new_value.l);
+		// TODO: This is where we may do something with the new manager in the plugin
 	}
 
 	printf("SecurityManager Changed:\n%s, %s, %d\n\n", source_file_name, method_name, line_number);
-
 }
