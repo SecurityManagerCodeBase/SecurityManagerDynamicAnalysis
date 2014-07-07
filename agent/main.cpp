@@ -9,7 +9,14 @@
  */
 #include <jvmti.h>
 #include <string.h>
+#include <stdio.h>
+#include <iostream>
+#include <fstream>
+using namespace std;
+static FILE* myfile;
 
+
+void JNICALL callback_on_VMStart(jvmtiEnv *jvmti, JNIEnv* jni);
 void JNICALL VMInit(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread);
 void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
 jvmtiError GetClassBySignature(jvmtiEnv* jvmti, const char* signature, jclass* klass);
@@ -19,7 +26,16 @@ void JNICALL FieldModification(jvmtiEnv *jvmti_env, JNIEnv* jni_env,
                 jclass field_klass, jobject object, jfieldID field,
                 char signature_type, jvalue new_value);
 
+void JNICALL callback_on_VMStart(jvmtiEnv *jvmti, JNIEnv* jni)
+{
+    fputs("Callback on VMStart.\n", myfile);
+    fputs("#################################################\n", myfile);
+}
+
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* jvm, char* options, void* reserved) {
+	myfile= fopen("dynamic_analysis.txt", "w");
+  	
 	jvmtiEnv* jvmti = NULL;
 	jvmtiCapabilities capabilities;
 	jvmtiError error;
@@ -31,7 +47,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* jvm, char* options, void* reserved) 
 	// Get JVMTI environment
 	jint env_error = jvm->GetEnv((void **)&jvmti, JVMTI_VERSION_1_0);
 	if (env_error != JNI_OK || jvmti == NULL) {
-		printf("Failed to get JVMTI environment.");
+		fputs("Failed to get JVMTI environment.", myfile);
 		return env_error;
 	}
 
@@ -54,6 +70,11 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* jvm, char* options, void* reserved) 
     check_jvmti_error(jvmti, error, "Unable to set JVMTI_EVENT_VM_INIT.");
 
 	callbacks.VMInit = &VMInit;
+
+	// Setup vmstart callback
+	callbacks.VMStart = &callback_on_VMStart;
+    jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
+    jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_START, NULL);
 
 	// Set a callback to receive events when the security field of System is set.
 	// This will let us see when the security manager is being changed.
@@ -87,7 +108,7 @@ void print_jvmti_error(jvmtiEnv* jvmti, jvmtiError errnum, const char* str)
     char* errnum_str = NULL;
 
     jvmti->GetErrorName(errnum, &errnum_str);
-    printf("ERROR: JVMTI: %d(%s): %s\n", errnum, errnum_str == NULL ? "Unknown" : errnum_str, 
+    fprintf(myfile, "ERROR: JVMTI: %d(%s): %s\n", errnum, errnum_str == NULL ? "Unknown" : errnum_str, 
 		str == NULL ? "" : str);
 
 	jvmti->Deallocate((unsigned char*)errnum_str);
@@ -220,15 +241,22 @@ void JNICALL FieldModification(jvmtiEnv* jvmti, JNIEnv* jni_env,
 
 	// If new_value is full a null SecurityManager raise a red flag
 	if ((long)new_value.j == 0) {
-		printf("WARNING: The SecurityManager is being disabled!!!\n");
+		fputs("WARNING: The SecurityManager is being disabled!!!\n", myfile);
 	} else {
 		//jclass new_manager = jni_env->GetObjectClass(new_value.l);
 		// TODO: This is where we may do something with the new manager in the plugin
 	}
 
-	printf("SecurityManager Changed:\n%s, %s, %d\n\n", source_file_name, method_name, line_number);
+	fprintf(myfile, "SecurityManager Changed:\n%s, %s, %d\n\n", source_file_name, method_name, line_number);
 
 	jvmti->Deallocate((unsigned char*)line_table);
 	jvmti->Deallocate((unsigned char*)method_name);
 	jvmti->Deallocate((unsigned char*)source_file_name);
+}
+
+JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *vm)
+{
+    fputs("#################################################\n", myfile);
+    fputs("Agent OnUnload, agent exits.\n", myfile);
+    fclose(myfile);
 }
