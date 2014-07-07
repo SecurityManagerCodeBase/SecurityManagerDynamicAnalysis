@@ -15,7 +15,6 @@
 using namespace std;
 static FILE* myfile;
 
-
 void JNICALL callback_on_VMStart(jvmtiEnv *jvmti, JNIEnv* jni);
 void JNICALL VMInit(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread);
 void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
@@ -32,9 +31,8 @@ void JNICALL callback_on_VMStart(jvmtiEnv *jvmti, JNIEnv* jni)
     fputs("#################################################\n", myfile);
 }
 
-
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* jvm, char* options, void* reserved) {
-	myfile= fopen("dynamic_analysis.txt", "w");
+	myfile= fopen("Plugin_output.txt", "w");
   	
 	jvmtiEnv* jvmti = NULL;
 	jvmtiCapabilities capabilities;
